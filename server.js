@@ -149,6 +149,6 @@ wss.on('connection', (ws) => {
 });
 
 // Inicia o servidor
-server.listen(3100, () => {
-  console.log('Servidor rodando em http://localhost:3100');
+server.listen(PORT, () => {
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
