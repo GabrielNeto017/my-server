@@ -2,6 +2,9 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 
+// Define a porta compatível com Render
+const PORT = process.env.PORT || 3100;
+
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
