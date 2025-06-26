@@ -22,4 +22,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: gabrielneto/ppa-ws-controladora-cloud:1.2
+          tags: gneto017/ppa-ws-controladora-cloud:1.2
