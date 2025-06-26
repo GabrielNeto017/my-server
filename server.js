@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
-const { v4: uuidv4 } = require('uuid'); // você pode manter o uuid se quiser, mas não é usado no envio sem espera de resposta
+const { v4: uuidv4 } = require('uuid'); // para gerar ID único
 
 const app = express();
 const server = http.createServer(app);
@@ -9,6 +9,7 @@ const wss = new WebSocket.Server({ server });
 
 let microSocket = null;
 let stressTestActive = false;
+const pendingResponses = new Map();
 
 // Middleware para aceitar body mesmo em GET
 app.use((req, res, next) => {
@@ -30,28 +31,46 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-// Função para enviar comando para o micro e responder IMEDIATAMENTE ao HTTP
 function enviarParaMicro(req, res, tipo, dados = {}) {
   if (!microSocket || microSocket.readyState !== WebSocket.OPEN) {
     return res.status(503).send('Microcontrolador não conectado.');
   }
 
+  const id = uuidv4();
   const payload = {
+    id,
     tipo,
     metodo: req.method.toUpperCase(),
     body: dados
   };
 
+  const responsePromise = new Promise((resolve, reject) => {
+    pendingResponses.set(id, { resolve, reject });
+
+    setTimeout(() => {
+      if (pendingResponses.has(id)) {
+        pendingResponses.delete(id);
+        reject(new Error('Sem resposta do microcontrolador.'));
+      }
+    }, 3000);
+  });
+
   try {
     microSocket.send(JSON.stringify(payload));
-    // Resposta rápida, não espera retorno do micro
-    res.status(200).send(`Comando '${tipo}' (${req.method}) enviado ao microcontrolador.`);
   } catch (err) {
-    res.status(500).send(`Erro ao enviar: ${err.message}`);
+    pendingResponses.delete(id);
+    return res.status(500).send(`Erro ao enviar: ${err.message}`);
   }
+
+  responsePromise
+    .then((respostaDoMicro) => {
+      res.status(200).json(respostaDoMicro);
+    })
+    .catch((err) => {
+      res.status(504).send(err.message);
+    });
 }
 
-// Rotas POST
 app.post('/login', (req, res) => {
   enviarParaMicro(req, res, 'login', req.body);
 });
@@ -74,7 +93,6 @@ rotasPOST.forEach((rota) => {
   });
 });
 
-// Rotas GET que aceitam body
 const rotasGET = [
   'user_credentials', 'user_list',
   'department_list', 'get_sensors',
@@ -88,7 +106,6 @@ rotasGET.forEach((rota) => {
   });
 });
 
-// Rota /enviar para teste de estresse
 app.get('/enviar', async (req, res) => {
   if (!microSocket || microSocket.readyState !== WebSocket.OPEN) {
     return res.status(503).send('Microcontrolador não conectado.');
@@ -127,23 +144,28 @@ app.get('/enviar', async (req, res) => {
   console.log("Teste de estresse finalizado.");
 });
 
-// Parar o teste de estresse
 app.get('/parar', (req, res) => {
   stressTestActive = false;
   res.send("Teste de estresse interrompido.");
 });
 
-// WebSocket
 wss.on('connection', (ws) => {
   console.log("Microcontrolador conectado via WebSocket");
   microSocket = ws;
 
   ws.on('message', (message) => {
+    const msgStr = message.toString('utf8');
+    console.log('📨 Mensagem recebida do micro:', msgStr);
+
     try {
-      const msgStr = message.toString('utf8');
-      console.log('📨 Mensagem recebida do micro:', msgStr);
+      const resposta = JSON.parse(msgStr);
+
+      if (resposta.id && pendingResponses.has(resposta.id)) {
+        pendingResponses.get(resposta.id).resolve(resposta);
+        pendingResponses.delete(resposta.id);
+      }
     } catch (e) {
-      console.error("❌ Erro ao converter mensagem:", e.message);
+      console.log("Mensagem recebida não é JSON válido, ignorando parse.");
     }
   });
 
@@ -154,7 +176,6 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Iniciar servidor
 server.listen(3100, () => {
   console.log('Servidor rodando em http://localhost:3100');
 });
