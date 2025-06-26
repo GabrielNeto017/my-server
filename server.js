@@ -36,39 +36,21 @@ function enviarParaMicro(req, res, tipo, dados = {}) {
     return res.status(503).send('Microcontrolador não conectado.');
   }
 
-  const id = uuidv4();
   const payload = {
-    id,
+    id: uuidv4(),  // ainda pode gerar id se quiser
     tipo,
     metodo: req.method.toUpperCase(),
     body: dados
   };
 
-  const responsePromise = new Promise((resolve, reject) => {
-    pendingResponses.set(id, { resolve, reject });
-
-    setTimeout(() => {
-      if (pendingResponses.has(id)) {
-        pendingResponses.delete(id);
-        reject(new Error('Sem resposta do microcontrolador.'));
-      }
-    }, 3000);
-  });
-
   try {
     microSocket.send(JSON.stringify(payload));
   } catch (err) {
-    pendingResponses.delete(id);
     return res.status(500).send(`Erro ao enviar: ${err.message}`);
   }
 
-  responsePromise
-    .then((respostaDoMicro) => {
-      res.status(200).json(respostaDoMicro);
-    })
-    .catch((err) => {
-      res.status(504).send(err.message);
-    });
+  // Responde logo que enviou, não espera resposta do microcontrolador
+  return res.status(200).send(`Comando '${tipo}' (${req.method}) enviado ao microcontrolador.`);
 }
 
 app.post('/login', (req, res) => {
