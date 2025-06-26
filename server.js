@@ -27,6 +27,7 @@ app.use((req, res, next) => {
   }
 });
 
+
 app.use(express.json()); // para POST normalmente
 
 // Função para enviar dados ao microcontrolador
