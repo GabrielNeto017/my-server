@@ -2,9 +2,6 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 
-// Define a porta compatível com Render
-const PORT = process.env.PORT || 3100;
-
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
@@ -140,9 +137,14 @@ wss.on('connection', (ws) => {
   console.log("Microcontrolador conectado via WebSocket");
   microSocket = ws;
 
-  ws.on('message', (message) => {
-    console.log('Mensagem do micro:', message.toString());
-  });
+ws.on('message', (message) => {
+  try {
+    const msgStr = message.toString('utf8');
+    console.log('📨 Mensagem recebida do micro:', msgStr);
+  } catch (e) {
+    console.error("❌ Erro ao converter mensagem:", e.message);
+  }
+});
 
   ws.on('close', () => {
     console.log('Microcontrolador desconectado.');
@@ -152,6 +154,6 @@ wss.on('connection', (ws) => {
 });
 
 // Inicia o servidor
-server.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+server.listen(3000, () => {
+  console.log('Servidor rodando em http://localhost:3000');
 });

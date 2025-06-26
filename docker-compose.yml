@@ -1,0 +1,12 @@
+services:
+  micro-ws-server:
+    image: breinerhenrique/ppa-ws-controladora-cloud:1.2
+    container_name: micro-ws-server
+    restart: always
+    ports:
+      - '3000:3100'
+    volumes:
+      - ws-server:/usr/src/app
+
+volumes:
+  ws-server:
