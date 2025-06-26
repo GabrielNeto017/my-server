@@ -176,6 +176,7 @@ wss.on('connection', (ws) => {
   });
 });
 
+
 server.listen(3100, () => {
   console.log('Servidor rodando em http://localhost:3100');
 });
