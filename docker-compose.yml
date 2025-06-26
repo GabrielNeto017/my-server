@@ -1,6 +1,6 @@
 services:
   micro-ws-server:
-    image: gabrielneto/ppa-ws-controladora-cloud:1.2
+    image: gneto017/ppa-ws-controladora-cloud:1.2
     container_name: micro-ws-server
     restart: always
     ports:
