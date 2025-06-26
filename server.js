@@ -149,32 +149,25 @@ app.get('/parar', (req, res) => {
   res.send("Teste de estresse interrompido.");
 });
 
-function isJsonString(str) {
-  try {
-    JSON.parse(str);
-    return true;
-  } catch {
-    return false;
-  }
-}
+wss.on('connection', (ws) => {
+  console.log("Microcontrolador conectado via WebSocket");
+  microSocket = ws;
 
-ws.on('message', (message) => {
-  const msgStr = message.toString('utf8');
-  console.log('📨 Mensagem recebida do micro:', msgStr);
+  ws.on('message', (message) => {
+    const msgStr = message.toString('utf8');
+    console.log('📨 Mensagem recebida do micro:', msgStr);
 
-  // Tenta parsear, se der erro é texto simples — não problema
-  try {
-    const resposta = JSON.parse(msgStr);
+    try {
+      const resposta = JSON.parse(msgStr);
 
-    // Se for resposta a uma requisição pendente
-    if (resposta.id && pendingResponses.has(resposta.id)) {
-      pendingResponses.get(resposta.id).resolve(resposta);
-      pendingResponses.delete(resposta.id);
+      if (resposta.id && pendingResponses.has(resposta.id)) {
+        pendingResponses.get(resposta.id).resolve(resposta);
+        pendingResponses.delete(resposta.id);
+      }
+    } catch {
+      console.log("Mensagem recebida não é JSON válido, ignorando parse.");
     }
-  } catch {
-    // Aqui entra quando não é JSON válido, só loga mesmo
-    console.log("Mensagem recebida não é JSON válido, ignorando parse.");
-  }
+  });
 
   ws.on('close', () => {
     console.log('Microcontrolador desconectado.');
