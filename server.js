@@ -149,6 +149,15 @@ app.get('/parar', (req, res) => {
   res.send("Teste de estresse interrompido.");
 });
 
+function isJsonString(str) {
+  try {
+    JSON.parse(str);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 wss.on('connection', (ws) => {
   console.log("Microcontrolador conectado via WebSocket");
   microSocket = ws;
@@ -157,14 +166,14 @@ wss.on('connection', (ws) => {
     const msgStr = message.toString('utf8');
     console.log('📨 Mensagem recebida do micro:', msgStr);
 
-    try {
+    if (isJsonString(msgStr)) {
       const resposta = JSON.parse(msgStr);
 
       if (resposta.id && pendingResponses.has(resposta.id)) {
         pendingResponses.get(resposta.id).resolve(resposta);
         pendingResponses.delete(resposta.id);
       }
-    } catch (e) {
+    } else {
       console.log("Mensagem recebida não é JSON válido, ignorando parse.");
     }
   });
